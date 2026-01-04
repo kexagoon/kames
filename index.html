@@ -2,32 +2,362 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Эволюция существ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BT Script Builder Mobile</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background: #111;
+        /* ЦВЕТОВАЯ ПАЛИТРА КИБЕРПАНКА */
+        :root {
+            --bg-dark: #0a0e1a;
+            --bg-panel: #141a2e;
+            --accent-cyan: #00d4ff;
+            --accent-green: #00ff88;
+            --text-main: #ffffff;
+            --text-dim: #a0aec0;
+            --danger: #ff6b35;
+            --border: #2a3f5f;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden; /* Фиксируем экран для мобилок */
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #background-canvas {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        /* ШАПКА */
+        header {
+            padding: 12px 16px;
+            background: rgba(10, 14, 26, 0.9);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            color: var(--accent-cyan);
+            text-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        /* ТУЛБАР (КНОПКИ) */
+        .toolbar-container {
+            padding: 10px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .toolbar { display: flex; gap: 8px; }
+
+        .cmd-btn {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .cmd-btn:active { background: var(--accent-cyan); color: var(--bg-dark); }
+
+        /* СПИСОК КОМАНД */
+        .script-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background: rgba(20, 26, 46, 0.5);
+        }
+
+        .command-item {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            margin-bottom: 8px;
+            padding: 12px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .drag-handle { color: var(--text-dim); cursor: grab; font-size: 18px; }
+
+        .command-text { flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+
+        .delete-btn {
+            background: rgba(255, 107, 53, 0.2);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            width: 28px; height: 28px; border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* ФУТЕР И ЭКСПОРТ */
+        footer {
+            padding: 16px;
+            background: var(--bg-dark);
+            border-top: 1px solid var(--border);
+        }
+
+        .cyber-select {
+            width: 100%;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
             color: white;
-            font-family: sans-serif;
-        }
-        canvas {
-            display: block;
-        }
-        #stats {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.5);
             padding: 10px;
             border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .cyber-button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer;
+        }
+
+        .cyber-button.primary {
+            background: var(--accent-cyan);
+            color: var(--bg-dark);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+        }
+
+        /* МОДАЛКИ */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center; justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: var(--bg-panel);
+            border: 1px solid var(--accent-cyan);
+            padding: 20px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .cyber-textarea {
+            width: 100%;
+            height: 150px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--accent-green);
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            margin: 10px 0;
+        }
+
+        .cyber-input {
+            width: 100%;
+            background: var(--bg-dark);
+            border: 1px solid var(--accent-cyan);
+            color: white;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
         }
     </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 </head>
 <body>
-    <div id="stats">Loading...</div>
-    <canvas id="simulation"></canvas>
-    <script src="main.js"></script>
+    <canvas id="background-canvas"></canvas>
+
+    <header>
+        <h1>BT SCRIPT <span style="color:var(--accent-green)">BUILDER</span></h1>
+        <button id="reset-btn" class="cmd-btn" style="border-color:var(--danger); color:var(--danger)">СБРОС</button>
+    </header>
+
+    <div class="toolbar-container">
+        <div class="toolbar">
+            <button class="cmd-btn" data-type="STRING">STRING</button>
+            <button class="cmd-btn" data-type="DELAY">DELAY</button>
+            <button class="cmd-btn" data-type="ENTER">ENTER</button>
+            <button class="cmd-btn" data-type="GUI">GUI</button>
+            <button class="cmd-btn" data-type="CTRL">CTRL</button>
+            <button class="cmd-btn" data-type="ALT">ALT</button>
+            <button class="cmd-btn" data-type="SHIFT">SHIFT</button>
+            <button class="cmd-btn" data-type="TAB">TAB</button>
+            <button class="cmd-btn" data-type="SPACE">SPACE</button>
+        </div>
+    </div>
+
+    <main class="script-area">
+        <div id="command-list">
+            <div style="text-align: center; color: var(--text-dim); margin-top: 40px;">Нажмите кнопки выше</div>
+        </div>
+    </main>
+
+    <footer>
+        <select id="export-format" class="cyber-select">
+            <option value="ducky">DuckyScript (.txt)</option>
+            <option value="flipper">Flipper Zero (.sub)</option>
+            <option value="esp32">Arduino ESP32 (.ino)</option>
+        </select>
+        <button id="generate-btn" class="cyber-button primary">СГЕНЕРИРОВАТЬ</button>
+    </footer>
+
+    <div id="result-modal" class="modal">
+        <div class="modal-content">
+            <h2 style="color:var(--accent-cyan); font-size: 16px;">РЕЗУЛЬТАТ</h2>
+            <textarea id="result-output" class="cyber-textarea" readonly></textarea>
+            <button id="copy-btn" class="cyber-button primary">КОПИРОВАТЬ</button>
+            <button onclick="document.getElementById('result-modal').style.display='none'" class="cyber-button" style="background:none; color:var(--text-dim); margin-top: 5px;">ЗАКРЫТЬ</button>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="edit-modal-title" style="color:var(--accent-cyan); font-size: 16px;">ВВОД</h2>
+            <input type="text" id="edit-input" class="cyber-input">
+            <button id="save-edit-btn" class="cyber-button primary">СОХРАНИТЬ</button>
+        </div>
+    </div>
+
+    <script>
+        // ЛОГИКА ПРИЛОЖЕНИЯ
+        let scriptCommands = [];
+        let commandIdCounter = 0;
+        let currentEditCommandId = null;
+
+        const commandList = document.getElementById('command-list');
+        const editModal = document.getElementById('edit-modal');
+        const editInput = document.getElementById('edit-input');
+
+        // Инициализация сортировки
+        new Sortable(commandList, {
+            animation: 150,
+            handle: '.drag-handle',
+            onEnd: (evt) => {
+                const movedItem = scriptCommands.splice(evt.oldIndex, 1)[0];
+                scriptCommands.splice(evt.newIndex, 0, movedItem);
+            }
+        });
+
+        // Добавление команд
+        document.querySelectorAll('.cmd-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const type = btn.dataset.type;
+                if (!type) return;
+                
+                if (type === 'STRING' || type === 'DELAY') {
+                    openEditModal(type);
+                } else {
+                    addCommand(type);
+                }
+            });
+        });
+
+        function addCommand(type, value = null) {
+            scriptCommands.push({ id: commandIdCounter++, type, value });
+            render();
+        }
+
+        function openEditModal(type) {
+            currentEditCommandId = null;
+            document.getElementById('edit-modal-title').textContent = type;
+            editInput.value = '';
+            editModal.style.display = 'flex';
+            editInput.focus();
+        }
+
+        document.getElementById('save-edit-btn').onclick = () => {
+            const type = document.getElementById('edit-modal-title').textContent;
+            addCommand(type, editInput.value);
+            editModal.style.display = 'none';
+        };
+
+        function render() {
+            if (scriptCommands.length === 0) {
+                commandList.innerHTML = '<div style="text-align: center; color: var(--text-dim); margin-top: 40px;">Нажмите кнопки выше</div>';
+                return;
+            }
+            commandList.innerHTML = '';
+            scriptCommands.forEach((cmd, index) => {
+                const div = document.createElement('div');
+                div.className = 'command-item';
+                div.innerHTML = `
+                    <span class="drag-handle">☰</span>
+                    <span class="command-text"><strong>${cmd.type}</strong> ${cmd.value ? ': ' + cmd.value : ''}</span>
+                    <button class="delete-btn" onclick="deleteCmd(${index})">×</button>
+                `;
+                commandList.appendChild(div);
+            });
+        }
+
+        window.deleteCmd = (index) => {
+            scriptCommands.splice(index, 1);
+            render();
+        };
+
+        document.getElementById('reset-btn').onclick = () => {
+            if (confirm('Очистить всё?')) {
+                scriptCommands = [];
+                render();
+            }
+        };
+
+        // Генерация
+        document.getElementById('generate-btn').onclick = () => {
+            if (scriptCommands.length === 0) return alert('Пусто!');
+            let res = scriptCommands.map(c => c.type === 'STRING' ? 'STRING ' + c.value : c.type === 'DELAY' ? 'DELAY ' + c.value : c.type).join('\n');
+            document.getElementById('result-output').value = res;
+            document.getElementById('result-modal').style.display = 'flex';
+        };
+
+        document.getElementById('copy-btn').onclick = () => {
+            navigator.clipboard.writeText(document.getElementById('result-output').value);
+            alert('Скопировано!');
+        };
+
+        // Анимация фона (упрощенная)
+        const canvas = document.getElementById('background-canvas');
+        const app = new PIXI.Application({ view: canvas, resizeTo: window, transparent: true });
+        const graphics = new PIXI.Graphics();
+        app.stage.addChild(graphics);
+        app.ticker.add(() => {
+            graphics.clear();
+            graphics.lineStyle(1, 0x00d4ff, 0.1);
+            for(let i=0; i<window.innerWidth; i+=40) { graphics.moveTo(i, 0); graphics.lineTo(i, window.innerHeight); }
+            for(let i=0; i<window.innerHeight; i+=40) { graphics.moveTo(0, i); graphics.lineTo(window.innerWidth, i); }
+        });
+    </script>
 </body>
 </html>
